@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include "dsviewer_interface.h"
-#include "z2color.h"
+#include "common/dsviewer_interface.h"
+#include "common/z2color.h"
 #include "upsampling/upsampling.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
@@ -177,9 +177,9 @@ int main(int argc, char* argv[])
 #ifdef SHOW_TIME
     chrono::system_clock::time_point t_start, t_end; 
 #endif
-    int frame_num = 82;
+    int frame_num = 0;
     int max_frame_num = 100;
-    int fixedFrame = 1;
+    int fixedFrame = 0;
     while(1) {
         // file names
         cout << "frame = " << frame_num << endl;

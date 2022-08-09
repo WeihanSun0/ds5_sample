@@ -210,6 +210,11 @@ inline void mark_block(cv::Mat& img, int u, int v, int r)
 	img(cv::Rect(start_u, start_v, end_u-start_u, end_v-start_v)) = 1.0;
 }
 
+/**
+ * @brief depth preproocessing without edge processing
+ * 
+ * @param pc_flood 
+ */
 void upsampling::flood_depth_proc_without_edge(const cv::Mat& pc_flood)
 {
 	// make depthmap
@@ -246,6 +251,12 @@ void upsampling::flood_depth_proc_without_edge(const cv::Mat& pc_flood)
 	});
 }
 
+
+/**
+ * @brief depth preprocessing with edge processing
+ * 
+ * @param pc_flood 
+ */
 void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 {
 	int width = this->m_guide_width_;
@@ -311,6 +322,11 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
     }
 }
 
+/**
+ * @brief depth preprocessing
+ * 
+ * @param pc_flood 
+ */
 void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
 {
 	if (this->m_depth_edge_proc_on_) {
@@ -319,99 +335,6 @@ void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
 		this->flood_depth_proc_without_edge(pc_flood);
 	}
 }
-
-#if 0
-void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
-{
-	// create uv map
-	cv::Mat u_map=cv::Mat::zeros(pc_flood.size(), CV_32FC1);
-    for (int y = 0; y < this->m_grid_height_; ++y) {
-        for (int x = 0; x < this->m_grid_width_; ++x) {
-            float z = pc_flood.at<cv::Vec3f>(y, x)[2];
-            float uf = pc_flood.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
-            u_map.at<float>(y, x) = uf;
-        }
-    }
-	// create occlusion map
-	cv::Mat occ_map = cv::Mat::zeros(pc_flood.size(), CV_32FC1);
-    cv::Mat z_continuous_map = cv::Mat::zeros(pc_flood.size(), CV_32FC1);
-    for (int y = 0; y < this->m_grid_height_; ++y) {
-        for (int x = 1; x < this->m_grid_width_; ++x) {
-            // occlusion
-            float u = u_map.at<float>(y, x);
-            float u_left = u_map.at<float>(y, x-1);
-            occ_map.at<float>(y, x) = u - u_left;
-            // 隣がNaNの場合はthreshより大きな値いれておく
-            if (!isnan(u) && isnan(u_left)) {
-                occ_map.at<float>(y, x) = this->m_occlusion_thresh_ + 1;
-            }
-            //continuous
-            float z = pc_flood.at<cv::Vec3f>(y, x)[2];
-            float z_left = pc_flood.at<cv::Vec3f>(y, x - 1)[2];
-            // zが連続的かジャンプしているか zに対する割合で確認
-            if (!isnan(z) && !isnan(z_left)) {
-                float diff = abs(z - z_left);
-                z_continuous_map.at<float>(y, x) = diff/z;//mm
-            }
-            // 左隣がNaNの場合は最小値いれておく
-            if (!isnan(z) && isnan(z_left)) {
-                z_continuous_map.at<float>(y, x) = FLT_EPSILON;
-            }
-        }
-    }
-    cv::Mat oc_mask = cv::Mat::zeros(pc_flood.size(), CV_8UC1);
-    oc_mask.setTo(1, occ_map > 0);
-    oc_mask.setTo(0, occ_map < this->m_occlusion_thresh_);
-    cv::Mat continu_mask = cv::Mat::zeros(pc_flood.size(), CV_8UC1);
-    continu_mask.setTo(1, z_continuous_map > 0);
-    continu_mask.setTo(0, z_continuous_map > this->m_z_continuous_thresh_);
-    cv::Mat depth_filtered_mask;
-    cv::bitwise_or(oc_mask, continu_mask, depth_filtered_mask);	
-
-
-	cv::Mat pc_flood_cpy;
-	pc_flood.copyTo(pc_flood_cpy);
-	cv::Mat dpeth_filtered_mask_f = cv::Mat::zeros(pc_flood.size(), CV_32FC3);
-	dpeth_filtered_mask_f.setTo((1.0, 1.0, 1.0), depth_filtered_mask > 0);
-	cv::multiply(pc_flood_cpy, dpeth_filtered_mask_f, pc_flood_cpy);
-
-	int width = this->m_guide_width_;
-	int height = this->m_guide_height_;
-	float cx = this->m_cx_;
-	float cy = this->m_cy_;
-	float fx = this->m_fx_;
-	float fy = this->m_fy_;
-	int minX = this->m_guide_width_, minY = this->m_guide_height_, maxX = 0, maxY = 0;
-	int r = this->m_range_flood_;
-	cv::Mat flood_dmap = this->m_flood_dmap_;
-	cv::Mat flood_mask = this->m_flood_mask_;
-	cv::Mat flood_range = this->m_flood_range_;
-	pc_flood_cpy.forEach<cv::Vec3f>([&flood_dmap, &flood_mask, &flood_range, &minX, &minY, &maxX, &maxY, 
-									r, cx, cy, fx, fy, width, height]
-							(cv::Vec3f& p, const int * pos) -> void {
-		float z = p[2];
-		if (std::isnan(z) || z == 0.0) {
-
-		} else {
-			float x = p[0];
-			float y = p[1];
-			float uf = (x * fx / z) + cx;
-			float vf = (y * fy / z) + cy;
-			int u = static_cast<int>(std::round(uf));
-			int v = static_cast<int>(std::round(vf));
-			if (u >= 0 && u < width && v >= 0 && v < height) {
-				flood_dmap.at<float>(v, u) = z;
-				flood_mask.at<float>(v, u) = 1.0;
-				mark_block(flood_range, u, v, r);
-				if (u < minX) minX = u;
-				if (u > maxX) maxX = u;
-				if (v < minY) minY = v;
-				if (v > maxY) maxY = v;
-			}	
-		}
-	});
-}
-#endif
 
 
 /**

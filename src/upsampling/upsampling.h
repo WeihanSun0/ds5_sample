@@ -1,7 +1,6 @@
 #pragma once
 #include <opencv2/opencv.hpp>
 #include <opencv2/ximgproc.hpp>
-#include <list>
 
 typedef struct Upsampling_Params{
 	float fgs_lambda_flood = 48; // 0.1~100
@@ -94,8 +93,8 @@ private:
 	// upsampling paramters
 	
 	// fgs_paramters
-	float m_fgs_lambda_flood_ = 220; // 0.1~100
-	float m_fgs_sigma_color_flood_ = 4; // 1~20
+	float m_fgs_lambda_flood_ = 220; // 0.1~1000
+	float m_fgs_sigma_color_flood_ = 4; // 0~256
 	float m_fgs_lambda_attenuation_ = 0.25;
 	float m_fgs_lambda_spot_ = 700; 
 	float m_fgs_sigma_color_spot_ = 5; // 1~20
