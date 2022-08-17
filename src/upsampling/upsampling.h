@@ -97,13 +97,13 @@ private:
 	float m_fgs_sigma_color_spot_ = 5.f; // 1~20
 	int m_fgs_num_iter_flood_ = 1; //1~5
 	int m_fgs_num_iter_spot_ = 2;
-	int m_range_flood_ = 20; // 2~40
 	// flood preprocessing paramters
 	int m_guide_edge_dilate_size_ = 4; // (1~10) dilate size of guide image edge
 	float m_z_continuous_thresh_ = 0.1f; // (0~1) z threshold for continuous region 
 	float m_occlusion_thresh_ = 10.5f; // (0~20.0)  threshold for justification of occlusion (max pixels between neigbors)
 	int m_canny_thresh1_ = 40; // 0~255
 	int m_canny_thresh2_ = 170; // 0~255
+	int m_range_flood_ = 20; // 2~40
 	// camera paramters
 	float m_fx_ = 135.51f;
 	float m_fy_ = 135.51f;
