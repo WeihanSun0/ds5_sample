@@ -308,8 +308,8 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 			if (u_diff < this->m_occlusion_thresh_ || z_diff_per > this->m_z_continuous_thresh_) { //remove
 				;
 			} else { // converto depthmap
-				int u = static_cast<int>(std::round(uf));
-				int v = static_cast<int>(std::round(vf));
+				u = static_cast<int>(std::round(uf));
+				v = static_cast<int>(std::round(vf));
 				if (u >= 0 && u < width && v >= 0 && v < height) {
 					flood_dmap.at<float>(v, u) = z;
 					flood_mask.at<float>(v, u) = 1.0;
