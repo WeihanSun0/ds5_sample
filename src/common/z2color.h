@@ -54,15 +54,15 @@ bool PlotContour(
 
 	for (int y = 0; y < (stepimg.rows - 1); ++y) {
 		for (int x = 0; x < (stepimg.cols - 1); ++x) {
-			if (stepimg.at<char>(y, x) == (stepimg.at<char>(y, x + 1) + step_width)
-				|| stepimg.at<char>(y, x) == (stepimg.at<char>(y, x + 1) - step_width)) {
-				contour.at<char>(y, x) = 255;
-				contour.at<char>(y, x + 1) = 255;
+			if (stepimg.at<uchar>(y, x) == (stepimg.at<char>(y, x + 1) + step_width)
+				|| stepimg.at<uchar>(y, x) == (stepimg.at<char>(y, x + 1) - step_width)) {
+				contour.at<uchar>(y, x) = 255;
+				contour.at<uchar>(y, x + 1) = 255;
 			};
-			if (stepimg.at<char>(y, x) == (stepimg.at<char>(y + 1, x) + step_width)
+			if (stepimg.at<uchar>(y, x) == (stepimg.at<char>(y + 1, x) + step_width)
 				|| stepimg.at<char>(y, x) == (stepimg.at<char>(y + 1, x) - step_width)) {
-				contour.at<char>(y, x) = 255;
-				contour.at<char>(y + 1, x) = 255;
+				contour.at<uchar>(y, x) = 255;
+				contour.at<uchar>(y + 1, x) = 255;
 			};
 		}
 	}
@@ -84,7 +84,7 @@ bool PlotContour(
  */
 cv::Mat mergeImages(const std::vector<cv::Mat>& vecImgs, const std::vector<std::string>& labels, const cv::Size& size)
 {
-	int num = vecImgs.size();
+	size_t num = vecImgs.size();
 	int num_x = size.width;
 	int num_y = size.height;
 	int width = 0, height = 0;
@@ -167,7 +167,6 @@ cv::Mat markSparseDepth(const cv::Mat& imgRGB, const cv::Mat& sparseDepth, const
 	int width = imgRGB.cols;
 	int height = imgRGB.rows;
 	std::vector<std::pair<int, int>> vecPos;
-	int tmp;
 	mask.forEach<float>([&img, &sparseDepth, &size](float& pixel, const int pos[]) -> void {
 		if (pixel == 1.0) {
 			int x = pos[1];

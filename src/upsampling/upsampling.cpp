@@ -347,7 +347,7 @@ void upsampling::flood_guide_proc2(const cv::Mat& guide)
 	cv::Rect roi = this->m_flood_roi_;
 	this->m_fgs_filter_ = cv::ximgproc::createFastGlobalSmootherFilter(guide(roi), 
 							(double)this->m_fgs_lambda_flood_, (double)this->m_fgs_sigma_color_flood_, 
-							(double)this->m_fgs_lambda_attenuation_, (double)this->m_fgs_num_iter_flood_);
+							(double)this->m_fgs_lambda_attenuation_, this->m_fgs_num_iter_flood_);
 }
 
 /**
@@ -405,7 +405,7 @@ void upsampling::spot_guide_proc(const cv::Mat& guide)
 	cv::Rect roi = this->m_spot_roi_;
 	this->m_fgs_filter_ = cv::ximgproc::createFastGlobalSmootherFilter(guide(roi), 
 							(double)this->m_fgs_lambda_spot_, (double)this->m_fgs_sigma_color_spot_, 
-							(double)this->m_fgs_lambda_attenuation_, (double)this->m_fgs_num_iter_spot_);
+							(double)this->m_fgs_lambda_attenuation_, this->m_fgs_num_iter_spot_);
 
 }
 

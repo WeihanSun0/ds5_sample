@@ -59,11 +59,11 @@ cv::Mat visualization(const cv::Mat& guide, const cv::Mat& dmapFlood, const cv::
     char szLabel[255];
     if (mode == '1' || mode == '3') {
         vecImgs.push_back(imgGuideMapFlood);
-        sprintf(szLabel, "flood (FPS = %.2f)", g_FPS);
+        sprintf_s(szLabel, "flood (FPS = %.2f)", g_FPS);
         vecLabel.push_back(szLabel);
     } else {
         vecImgs.push_back(imgGuideMapSpot);
-        sprintf(szLabel, "spot (FPS = %.2f)", g_FPS);
+        sprintf_s(szLabel, "spot (FPS = %.2f)", g_FPS);
         vecLabel.push_back(szLabel);
     }
     vecImgs.push_back(imgOverlapDense);
@@ -184,11 +184,11 @@ int main(int argc, char* argv[])
         // file names
         cout << "frame = " << frame_num << endl;
         char szFN[255];
-        sprintf(szFN, "%s/%08d_rgb_gray_img.png", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strDataPath.c_str(), frame_num);
         string strGuide = string(szFN);
-        sprintf(szFN, "%s/%08d_spot_depth_pc.exr", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_spot_depth_pc.exr", strDataPath.c_str(), frame_num);
         string strSpotPc = string(szFN);
-        sprintf(szFN, "%s/%08d_flood_depth_pc.exr", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_flood_depth_pc.exr", strDataPath.c_str(), frame_num);
         string strFloodPc = string(szFN);
         // read dat
         cv::Mat imgGuide = cv::imread(strGuide, -1);
@@ -216,9 +216,9 @@ int main(int argc, char* argv[])
         }
 #ifdef SHOW_TIME
         t_end = chrono::system_clock::now();
-        double elapsed = chrono::duration_cast<chrono::microseconds>(t_end - t_start).count();
+        auto elapsed = chrono::duration_cast<chrono::microseconds>(t_end - t_start).count();
         cout << "\033[31;43mUpsampling total time = " << elapsed << " [us]\033[0m" << endl;
-        g_FPS = (float)1000/elapsed*1000;
+        g_FPS = (float)1000.f/(float)elapsed*1000.f;
 #endif
         // visualization
         cv::Mat dmapFlood = dc.get_flood_depthMap();
@@ -241,9 +241,9 @@ int main(int argc, char* argv[])
             mode = 'q';
             break;
         case 's': // save dense and conf
-            sprintf(szFN, "%s/%08d_dense_dmap.tiff", strDataPath.c_str(), frame_num);
+            sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strDataPath.c_str(), frame_num);
             cv::imwrite(szFN, dense);
-            sprintf(szFN, "%s/%08d_conf.tiff", strDataPath.c_str(), frame_num);
+            sprintf_s(szFN, "%s/%08d_conf.tiff", strDataPath.c_str(), frame_num);
             cv::imwrite(szFN, conf);
             break;
         case 'r': // reset parameters
