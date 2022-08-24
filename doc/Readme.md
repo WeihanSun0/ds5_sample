@@ -1,13 +1,13 @@
 # DS5 Upsampling サンプルコード説明書
 ## 概要
-本ドキュメントは、DS5向けのUpsamplingリリース物（**Upsampling処理のソースコード**と**サンプルコード**）に関する説明書です。\
+本ドキュメントは、DS5向けのUpsamplingリリース物（**Upsampling処理のソースコード**と**サンプルコード**）に関する説明書です。
 * Upsampling処理のソースコード
   * Upsamplingクラス、APIと処理の中身があります。
   * Guideイメージを参照し、入力のスパース点群からGuideイメージと同じ解像度の密なデプスマップと信頼度マップを出力します。
   * ユーザから前処理とメイン処理パラメータ設定により、Upsamplingの結果（精度、処理時間）が変わります。
-* |サンプルコード
+* サンプルコード
   * UpsamplingクラスAPIの使用例です。
-  * パラメータ調整結果を確認できます。
+  * GUIによりパラメータ調整結果を確認できます。
 
 
 本ドキュメントの構成は以下となります。
@@ -25,19 +25,20 @@
 |:-------:|:---------:|
 |Upsampling処理のソースコード   | Upsamplingクラス（APIと処理の中身）|
 |サンプルコード                 | UpsamplingクラスAPIの使用例|
-|DSViewer                     | 別途で提供する実機データを撮るツール|
+|DSViewer                     | 別途提供する実機データを撮るツール|
 |Guideイメージ　              |カメラセンサーからのグレイスケール画像（解像度:960x540）|
 |スパース点群                 |dToFからの３次元点座標(spotとfloodの解像度が異なる)|
-|flood                      |dToFからの密な点群（解像度:80x60）|
-|spot                       |dToFからの疎な点群（解像度:12x12）|
-|密なデプスマップ                 |Upsamplingの出力画像、画素値がZ値（解像度:960x540）|
-|信頼度マップ                   |Upsamplingの出力画像、画素値がデプスマップの信頼度（解像度:960x540）|
+|flood                      |dToF raw点群拡散光（解像度:80x60）|
+|spot                       |dToF raw点群spot光（解像度:12x12）|
+|密なデプスマップ                 |Upsamplingの出力画像、画素値はZ値（解像度:960x540）|
+|信頼度マップ                   |Upsamplingの出力画像、画素値はデプスマップの信頼度（解像度:960x540）|
 |前処理                         |点群からデプスマップへの変換、視差ズレあるところの処理など|
 |メイン処理                     |Guideイメージを参照し、スパースのデプスマップを密にする処理|
 |カメラパラメータ               |事前キャリブレーションからのパラメータ。点群とデプスマップの変換用|
 
 ### 更新履歴
 * 2022/8/8 (ver 1.0)　初期バージョン
+* <font color=red>2022/8/24 (ver 1.1)　DSViewerでの保存ファイル名の対応 </font>
 
 
 ## パッケージの構成
@@ -51,6 +52,7 @@
 ├── dat # テストデータ・カメラパラメータ \
 ├── inc # OpenCV include \
 ├── lib # OpenCV lib（ビルド済） \
+├── <font color=red>scripts # DSViewerで保存したファイルからサンプルアプリ入力の変換スクリプト（Python Script）</font> \
 └── src \
 &emsp;&emsp;    ├── CMakeLists.txt \
 &emsp;&emsp;    ├── common # 保存フィアルの読み込み・描画用 \
@@ -62,6 +64,7 @@
   * Windows 10 64bit Enterprise (21H2 19004)
   * Visual Studio 2019
   * CMake 3.23.0
+  * <font color=red>Python 3.8.5 (ファイル名変換スクリプト)</font>
 * OpenCVのビルド（Optional）
   * **ビルドしない場合、リリース物にビルド済のlibをご利用ください。**
   * [OpenCV4.1.0をCMakeを使って導入する方法](https://qiita.com/sanishi_pompom/items/02b158dfad3a5dafd0a1#:~:text=OpenCV%201%20%E4%B8%8B%E8%A8%98Git%E3%81%8B%E3%82%89%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%A6.zip%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%81%97%E3%81%BE%E3%81%99%E3%80%82%20%E4%BB%BB%E6%84%8F%E3%81%AE%E5%A0%B4%E6%89%80%E3%81%AB%E5%B1%95%E9%96%8B%E3%81%97%E3%81%BE%E3%81%99%E3%80%82%20...%202%20CMake%20%28GUI%29%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%97%E3%80%81OpenCV%E3%81%AEDIR,%E8%A8%AD%E5%AE%9A%E3%81%97%E3%81%9F%E3%83%91%E3%82%B9%E3%81%AB%E5%87%BA%E5%8A%9B%E3%81%95%E3%82%8C%E3%81%9F.sln%E3%82%92Visual%20Studio%E3%81%A7%E9%96%8B%E3%81%8D%E3%81%BE%E3%81%99%E3%80%82%20...%205%20ALL_BUILD%E3%82%92%E5%8F%B3%E3%82%AF%E3%83%AA%E3%83%83%E3%82%AF%E3%81%97%E3%81%A6%E3%83%93%E3%83%AB%E3%83%89%206%20INSTALL%E3%82%92%E5%8F%B3%E3%82%AF%E3%83%AA%E3%83%83%E3%82%AF%E3%81%97%E3%81%A6%E3%83%93%E3%83%AB%E3%83%89%20%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE%E3%82%A2%E3%82%A4%E3%83%86%E3%83%A0)と[opencv_contrib 4.1.0をCMakeを使って導入する方法](https://qiita.com/sanishi_pompom/items/5191aeca8d6de3e98595)にご参考ください。
@@ -79,22 +82,29 @@
 ```shell
 > cd bin\Windows_64_Release
 > (optional) ls # opencv_world412.dllを確認してください
-> .\upsampling_sample.exe　#　下記の画面が出ます。
+> .\upsampling_sample.exe　dat\master_30cm_blackBG 0 99 #　下記の画面が出ます。
 ```
+* <font color=red>実行コマンドの説明</font>
+  * 上の実行例のように、３つの引数があります。
+    * 1つ目: データパス。中にはGuideイメージ、スパース点群ファイルが置いてください。DSViewerで保存したファイルから変換する方法について、[「保存ファイルからサンプルアプリ入力の変換」](#保存ファイルからサンプルアプリ入力の変換)にご参考ください。
+    * 2つ目：開始フレームID. 例、00000001の場合、1を入れてください。
+    * 3つ目：終了フレームID. 例、00000099の場合、99を入れてください。
 
 ![sample](./imgs/sample_app_interface1.png)
 
 * サンプル機能
+  * <font color=red>基本機能</font>
+    * 指定データパスから、指定のフレームIDのデータを読み込みます。Upsampling APIを呼び出し、当前のフレームを処理し、描画した結果を表示します。指定の開始フレームIDから終了フレーマIDまでループして、上記の処理を行います。
   * パラメータ調整
-    * 上から10つのTrackbarで、メインパラメータが調整できる。（詳細について、[「パラメータ説明」](#パラメータ説明)にご参考ください。
+    * 上から10つのTrackbarで、メインパラメータが調整できます。（詳細について、[「パラメータ説明」](#パラメータ説明)にご参考ください。
   * 表示
     * Trackbarの下に３つの画像が横に並んで表示されます。（4K以下の解像度のディスプレイで一部が表示できない可能性があります。その場合、コードを編集し、一枚画像を表示しないようにしてください。編集方法について、[「描画変更方法」](#描画変更方法)にご参考ください。）
     * 連続フレームがループで生成されます。
-    * 左側：入力guide画像、実際に利用しているflood点
-    * 中央：Upsamplingから出力した密なのデプスマップとguideイメージと重ねる画像
-    * 右側：信頼度の高いUspampling結果とguideイメージと重ねる画像。（[信頼度によるフィルタリング](#信頼度によるフィルタリング)にご参考ください。）
+    * 左側：入力guide画像、upsamplingの入力に利用している前処理済みflood点
+    * 中央：Upsamplingから出力した密なのデプスマップとguideイメージを重ねた画像
+    * 右側：信頼度の高いUspampling結果とguideイメージを重ねた画像。（[信頼度によるフィルタリング](#信頼度によるフィルタリング)にご参考ください。）
   * キー入力
-    * 表示Windowがキーボードからの入力に対する反応です。
+    * 表示Windowがキーボードからの入力に対する反応です。画像window上で反応します
     * 「p」連続フレーム再生中止/再開
     * 「s」現在のフレームの処理結果の保存
       * 保存場所：入力場所と同じです。
@@ -203,8 +213,8 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 	|canny_thresh2              |int| 0~255    | Cannyエッジ抽出のthreshold2|
 	|range_flood                |int  | 2~40     | floodに対するUpsamplingの範囲、処理スピードに影響なし |
 * 注意点
-  * canny_thresh1 > canny_thresh2の場合、guideのエッジ処理が無効になる。処理が早くる。
-  * z_continuous_thresh=1 且つ occlusion_thresh=20の場合、depthエッジ処理が無効になる。処理が早くなる。
+  * canny_thresh1 > canny_thresh2の場合、guideのエッジ処理が無効になる。処理が速くなる。
+  * z_continuous_thresh=1 且つ occlusion_thresh=20の場合、depthエッジ処理が無効になる。処理が速くなる。
 
 * メイン処理パラメータ
   |パラメータ              | タイプ |範囲 | 説明 |
@@ -230,8 +240,17 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
   * 左上のメニュー（下記の画像）の<kbd>save still image</kbd>ボタンを押すと、録画開始
 ![sample4](imgs/dsviewer_menu.png)
 
-
 * DSViewerの具体的な使用方法について、DSViewerのドキュメントにご参考ください。
+
+### 保存ファイルからサンプルアプリ入力の変換
+* <font color=red>DSViewer</font>で保存したファイル名は<kbd><$frameID$>-<$timestamp$>_<$filetype$>.<$extname$></kbd>の形式になります。
+* サンプルアプリの入力ファイル名は<kbd><$frameID$>_<$filetype$>.<$extname$></kbd>の形式になります。
+* 変換スクリプトの<kbd>scripts/dat_convert.py</kbd>を用意しております。実行方法は以下となります。（python3.8で動作確認済）
+  * input_path: DSViewerでの保存フォルダです。
+  * output_path: 出力フォルダです。
+``` shell
+python ./scripts/dat_convert.py <input_path> <output_path>
+```
 
 ### guideイメージの明るさ調整
 guideイメージの明るさはupsamplingへの影響があります。
@@ -244,10 +263,11 @@ DSViewerでのファイル保存の前、調整する必要があります。
 ### カメラパラメータファイル取得方法
 Upsamplingサンプルコードに使用するカメラパラメータファイル（ファイル名が<kbd>strParam</kbd>変数に保存）が
 データ撮りのデバイスと一致する必要があります。\
-DSViewerにカメラパラメータファイルがあり（下記の場所）、指定場所にコピーしてご使用ください。
+* DSViewerにカメラパラメータファイルがあり（下記の場所）、指定場所にコピーしてご使用ください。
 ```shell
 <DSViewer Root Path>\data\master\param\camera_calib\param.txt
 ```
+* <font color=red>サンプルアプリには、<kbd>strParam</kbd>変数が固定されているので、同じ場所にパラメータを置いてください。</font>
 
 
 ### 描画変更方法
@@ -281,7 +301,6 @@ return mergeImages(vecImgs, vecLabel, cv::Size(3, 1)); // 3 images in 1 line
 
 ### 信頼度によるフィルタリング
 Upsamplingの機能ではありません。サンプルアプリには、Upsampling後に信頼度の高いデプスマップのみ残る処理を実現しました。また、信頼度閾値を調整し、結果を確認することができます。
-
 
 
 
