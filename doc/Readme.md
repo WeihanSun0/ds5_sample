@@ -1,5 +1,5 @@
 # DS5 Upsampling サンプルコード説明書
-## 概要
+## 1. 概要
 本ドキュメントは、DS5向けのUpsamplingリリース物（**Upsampling処理のソースコード**と**サンプルコード**）に関する説明書です。
 * Upsampling処理のソースコード
   * Upsamplingクラス、APIと処理の中身があります。
@@ -19,8 +19,8 @@
 * 補足
 
 
-## 用語・更新履歴
-### 用語
+## 2. 用語・更新履歴
+### 2.1 用語
 | 用語 | 説明|
 |:-------:|:---------:|
 |Upsampling処理のソースコード   | Upsamplingクラス（APIと処理の中身）|
@@ -36,12 +36,12 @@
 |メイン処理                     |Guideイメージを参照し、スパースのデプスマップを密にする処理|
 |カメラパラメータ               |事前キャリブレーションからのパラメータ。点群とデプスマップの変換用|
 
-### 更新履歴
+### 2.2 更新履歴
 * 2022/8/8 (ver 1.0)　初期バージョン
-* <font color=red>2022/8/24 (ver 1.1)　DSViewerでの保存ファイル名の対応 </font>
+* 2022/8/24 (ver 1.1)　DSViewerでの保存ファイル名の対応 
 
 
-## パッケージの構成
+## 3. パッケージの構成
 リリース物の構成は以下となります。\
 \<Release PATH> \
 ├── CMakeLists.txt # コンパイルファイル　\
@@ -52,19 +52,19 @@
 ├── dat # テストデータ・カメラパラメータ \
 ├── inc # OpenCV include \
 ├── lib # OpenCV lib（ビルド済） \
-├── <font color=red>scripts # DSViewerで保存したファイルからサンプルアプリ入力の変換スクリプト（Python Script）</font> \
+├── scripts # DSViewerで保存したファイルからサンプルアプリ入力の変換スクリプト（Python Script） \
 └── src \
 &emsp;&emsp;    ├── CMakeLists.txt \
 &emsp;&emsp;    ├── common # 保存フィアルの読み込み・描画用 \
 &emsp;&emsp;    ├── sample.cpp # サンプルコード　\
 &emsp;&emsp;    └── upsampling # Upsamplingソースコード
 
-## ビルド手順
+## 4. ビルド手順
 * 動作確認環境：
   * Windows 10 64bit Enterprise (21H2 19004)
   * Visual Studio 2019
   * CMake 3.23.0
-  * <font color=red>Python 3.8.5 (ファイル名変換スクリプト)</font>
+  * Python 3.8.5 (ファイル名変換スクリプト)
 * OpenCVのビルド（Optional）
   * **ビルドしない場合、リリース物にビルド済のlibをご利用ください。**
   * [OpenCV4.1.0をCMakeを使って導入する方法](https://qiita.com/sanishi_pompom/items/02b158dfad3a5dafd0a1#:~:text=OpenCV%201%20%E4%B8%8B%E8%A8%98Git%E3%81%8B%E3%82%89%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%A6.zip%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%81%97%E3%81%BE%E3%81%99%E3%80%82%20%E4%BB%BB%E6%84%8F%E3%81%AE%E5%A0%B4%E6%89%80%E3%81%AB%E5%B1%95%E9%96%8B%E3%81%97%E3%81%BE%E3%81%99%E3%80%82%20...%202%20CMake%20%28GUI%29%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%97%E3%80%81OpenCV%E3%81%AEDIR,%E8%A8%AD%E5%AE%9A%E3%81%97%E3%81%9F%E3%83%91%E3%82%B9%E3%81%AB%E5%87%BA%E5%8A%9B%E3%81%95%E3%82%8C%E3%81%9F.sln%E3%82%92Visual%20Studio%E3%81%A7%E9%96%8B%E3%81%8D%E3%81%BE%E3%81%99%E3%80%82%20...%205%20ALL_BUILD%E3%82%92%E5%8F%B3%E3%82%AF%E3%83%AA%E3%83%83%E3%82%AF%E3%81%97%E3%81%A6%E3%83%93%E3%83%AB%E3%83%89%206%20INSTALL%E3%82%92%E5%8F%B3%E3%82%AF%E3%83%AA%E3%83%83%E3%82%AF%E3%81%97%E3%81%A6%E3%83%93%E3%83%AB%E3%83%89%20%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE%E3%82%A2%E3%82%A4%E3%83%86%E3%83%A0)と[opencv_contrib 4.1.0をCMakeを使って導入する方法](https://qiita.com/sanishi_pompom/items/5191aeca8d6de3e98595)にご参考ください。
@@ -77,14 +77,14 @@
 > cmake ..　
 > cmake --build . --config Release --target upsampling_sample -j 10
 ```
-## 実行・サンプル機能
+## 5. 実行・サンプル機能
 * 実行
 ```shell
 > cd bin\Windows_64_Release
 > (optional) ls # opencv_world412.dllを確認してください
-> .\upsampling_sample.exe　dat\master_30cm_blackBG 0 99 #　下記の画面が出ます。
+> .\upsampling_sample.exe　..\..\dat\master_30cm_blackBG 0 99 #　下記の画面が出ます。
 ```
-* <font color=red>実行コマンドの説明</font>
+* 実行コマンドの説明
   * 上の実行例のように、３つの引数があります。
     * 1つ目: データパス。中にはGuideイメージ、スパース点群ファイルが置いてください。DSViewerで保存したファイルから変換する方法について、[「保存ファイルからサンプルアプリ入力の変換」](#保存ファイルからサンプルアプリ入力の変換)にご参考ください。
     * 2つ目：開始フレームID. 例、00000001の場合、1を入れてください。
@@ -93,8 +93,8 @@
 ![sample](./imgs/sample_app_interface1.png)
 
 * サンプル機能
-  * <font color=red>基本機能</font>
-    * 指定データパスから、指定のフレームIDのデータを読み込みます。Upsampling APIを呼び出し、当前のフレームを処理し、描画した結果を表示します。指定の開始フレームIDから終了フレーマIDまでループして、上記の処理を行います。
+  * 基本機能
+    * 指定データパスから、指定のフレームIDのデータを読み込みます。Upsampling APIを呼び出し、順番にフレームを処理し、描画した結果を表示します。指定の開始フレームIDから終了フレーマIDまでループして、上記の処理を行います。
   * パラメータ調整
     * 上から10つのTrackbarで、メインパラメータが調整できます。（詳細について、[「パラメータ説明」](#パラメータ説明)にご参考ください。
   * 表示
@@ -120,8 +120,8 @@
 
 
 
-## Upsamplingインターフェイス
-### API
+## 6. Upsamplingインターフェイス
+### 6.1 API
 UpsamplingクラスのPublic関数と構造体に対応。
   |名前              | タイプ |　説明 |
   |:----------------------|:-----|:----------------:|
@@ -138,7 +138,7 @@ UpsamplingクラスのPublic関数と構造体に対応。
   |Preprocessing_Params|構造体|前処理パラメータ|
   |Camera_Params|構造体|カメラパラメータ|
 
-### APIの使用流れ
+### 6.2 APIの使用流れ
 * 使用流れは以下となります。
 ```mermaid
 graph TB
@@ -202,7 +202,7 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 ```
 
 
-### パラメータ説明
+### 6.3 パラメータ説明
 * 前処理パラメータ
   |パラメータ              | タイプ |範囲 | 説明 |
   |:----------------------|:-----|:------:|:----:|
@@ -229,8 +229,8 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 * 注意点
   * サンプルアプリには、floodに関するパラメータのみ調整しております。spotに関するパラメータを固定しております。
 
-## 補足
-### DSViewerでのファイル保存
+## 7 補足
+### 7.1 DSViewerでのファイル保存
 * 以下の手順でguideイメージ、スパース点群ファイルが保存できます。
   * DSViewerを起動、デバイスと接続
   * 画面右のWindowの<kbd>save</kbd>タブを選択。（下記の画像）frame countを設定
@@ -242,8 +242,8 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 
 * DSViewerの具体的な使用方法について、DSViewerのドキュメントにご参考ください。
 
-### 保存ファイルからサンプルアプリ入力の変換
-* <font color=red>DSViewer</font>で保存したファイル名は<kbd><$frameID$>-<$timestamp$>_<$filetype$>.<$extname$></kbd>の形式になります。
+### 7.2 保存ファイルからサンプルアプリ入力の変換
+* DSViewerで保存したファイル名は<kbd><$frameID$>-<$timestamp$>_<$filetype$>.<$extname$></kbd>の形式になります。
 * サンプルアプリの入力ファイル名は<kbd><$frameID$>_<$filetype$>.<$extname$></kbd>の形式になります。
 * 変換スクリプトの<kbd>scripts/dat_convert.py</kbd>を用意しております。実行方法は以下となります。（python3.8で動作確認済）
   * input_path: DSViewerでの保存フォルダです。
@@ -252,7 +252,7 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 python ./scripts/dat_convert.py <input_path> <output_path>
 ```
 
-### guideイメージの明るさ調整
+### 7.3 guideイメージの明るさ調整
 guideイメージの明るさはupsamplingへの影響があります。
 明るい方がおすすめです。\
 DSViewerでのファイル保存の前、調整する必要があります。
@@ -260,17 +260,17 @@ DSViewerでのファイル保存の前、調整する必要があります。
   * DSViewerがデバイスと接続してから、左のWindow（下記の画像）から、「image sensor setting」の「gain」を大きくしてください。隣のWindowで確認できます。
 ![img](imgs/RGB_gain.png)
 
-### カメラパラメータファイル取得方法
+### 7.4 カメラパラメータファイル取得方法
 Upsamplingサンプルコードに使用するカメラパラメータファイル（ファイル名が<kbd>strParam</kbd>変数に保存）が
 データ撮りのデバイスと一致する必要があります。\
 * DSViewerにカメラパラメータファイルがあり（下記の場所）、指定場所にコピーしてご使用ください。
 ```shell
 <DSViewer Root Path>\data\master\param\camera_calib\param.txt
 ```
-* <font color=red>サンプルアプリには、<kbd>strParam</kbd>変数が固定されているので、同じ場所にパラメータを置いてください。</font>
+* サンプルアプリには、<kbd>strParam</kbd>変数が固定されているので、同じ場所にパラメータを置いてください。
 
 
-### 描画変更方法
+### 7.5 描画変更方法
 ディスプレイの解像度が4K以下になる場合、表示画像の一部が見えない可能性があります。\
 <kbd>sample.cpp</kbd>ファイルの<kbd>visualization()</kbd>関数には描画に関する部分(下記のコード)を修正してください。
 ```cpp
@@ -299,7 +299,7 @@ return mergeImages(vecImgs, vecLabel, cv::Size(3, 1)); // 3 images in 1 line
 * 方法２：２行分けで表示
   * 最後の一行の<kbd>cv::Size(2,2)</kbd>に変更
 
-### 信頼度によるフィルタリング
+### 7.6 信頼度によるフィルタリング
 Upsamplingの機能ではありません。サンプルアプリには、Upsampling後に信頼度の高いデプスマップのみ残る処理を実現しました。また、信頼度閾値を調整し、結果を確認することができます。
 
 
