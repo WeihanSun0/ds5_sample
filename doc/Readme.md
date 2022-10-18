@@ -39,6 +39,7 @@
 ### 2.2 更新履歴
 * 2022/8/8 (ver 1.0)　初期バージョン
 * 2022/8/24 (ver 1.1)　DSViewerでの保存ファイル名の対応 
+* 2022/10/17 (ver 1.1.1)　DSViewerでの保存ファイル変換スクリプトの更新(Timestampの一致するフレームを同じFrame_IDにする) (7.2章更新)
 
 
 ## 3. パッケージの構成
@@ -251,6 +252,11 @@ dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
 ``` shell
 python ./scripts/dat_convert.py <input_path> <output_path>
 ```
+* 実行ディレクトリの下に変換レポート（「report.csv」というファイル）が生成される。変換レポートから、以下の内容が確認できる。
+  * 入力ディレクトリ（input_path）と出力ディレクトリ（output_path）
+  * 各IDのフレームに対応するTimeStamp
+  * 落としたTimeStampとファイルの状況
+![img](imgs/report_file.jpg)
 
 ### 7.3 guideイメージの明るさ調整
 guideイメージの明るさはupsamplingへの影響があります。
