@@ -266,7 +266,6 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 	cv::Mat flood_range = this->m_flood_range_;
 	int r = this->m_range_flood_;
 	// u map
-	cv::Mat u_map=cv::Mat::zeros(pc_flood.size(), CV_32FC1);
 	cv::Mat pc_cpy;
 	pc_flood.copyTo(pc_cpy);
     for (int y = 0; y < this->m_grid_height_; ++y) {
@@ -305,7 +304,7 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 				}
 			}
 			// justification
-			if (u_diff < this->m_occlusion_thresh_ || z_diff_per > this->m_z_continuous_thresh_) { //remove
+			if (u_diff < this->m_occlusion_thresh_ && z_diff_per > this->m_z_continuous_thresh_) { //remove
 				;
 			} else { // converto depthmap
 				u = static_cast<int>(std::round(uf));

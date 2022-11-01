@@ -19,12 +19,47 @@
 using namespace std;
 
 #define SHOW_TIME 
+#define __TEST_GUIDE__
+#define __TL10__
 
 const string rootPath = "../../";
 string strDataPath;
-const string strParam = rootPath + "dat/camParam/camera_calib/param.txt";
+string strSavePath = ".";
+
+#ifdef __TL10__
+const string strParam = rootPath + "dat/camParam/camera_calib/param_tl10.txt";
+#else
+const string strParam = rootPath + "dat/camParam/camera_calib/param_sun.txt";
+#endif
 
 float g_FPS = 0.0;
+
+int iDilate_size, iCanny_th1, iCanny_th2;
+
+// * DEBUG: to check guide image 
+void guide_edge_extraction(const cv::Mat& guide, cv::Mat & imgEdgeGuide, cv::Mat & imgBoarder)
+{
+    cv::Canny(guide, imgEdgeGuide, iCanny_th1, iCanny_th2, 3);
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, 
+        cv::Size(iDilate_size, iDilate_size));
+    cv::dilate(imgEdgeGuide, imgBoarder, kernel);
+}
+
+
+cv::Mat visualization_test(const cv::Mat& guide)
+{
+     cv::Mat imgGuideEdge, imgBoarder;
+    guide_edge_extraction(guide, imgGuideEdge, imgBoarder);
+    vector<cv::Mat> vecImgs;
+    vector<string> vecLabel;
+    vecImgs.push_back(guide);
+    vecLabel.push_back("guide");
+    // vecImgs.push_back(imgGuideEdge);
+    // vecLabel.push_back("edge");
+    vecImgs.push_back(imgBoarder);
+    vecLabel.push_back("boarder");
+    return mergeImages(vecImgs, vecLabel, cv::Size(2,1));
+}
 
 /**
  * @brief Visualization function
@@ -80,9 +115,9 @@ cv::Mat visualization(const cv::Mat& guide, const cv::Mat& dmapFlood, const cv::
     }
     vecImgs.push_back(imgOverlapDense);
     vecLabel.push_back("dense");
-    vecImgs.push_back(imgOverlapFiltered);
-    vecLabel.push_back("filtered");
-    return mergeImages(vecImgs, vecLabel, cv::Size(3, 1));
+    // vecImgs.push_back(imgOverlapFiltered);
+    // vecLabel.push_back("filtered");
+    return mergeImages(vecImgs, vecLabel, cv::Size(2, 1));
 }
 
 /**
@@ -163,6 +198,28 @@ inline void convert_params_local2global(Upsampling_Params& upsampling_params, Pr
     upsampling_params.fgs_num_iter_flood = iFgs_iter_num ;
 }
 
+inline void disable_preprocessing(int& iCanny_th1, int& iCanny_th2, int& iOcc_th, int& iNeigbor_th)
+{
+    iCanny_th1 = 250;
+    iCanny_th2 = 10;
+    iOcc_th = 0;
+    iNeigbor_th = 100;
+}
+
+void save_csv(const cv::Mat& img, const string& strFileName)
+{
+    fstream fs;
+    fs.open(strFileName, ios::out);
+    for (int r = 0; r < img.rows; r++) {
+        for (int c = 0; c < img.cols; c++) {
+            cv::Vec3f v3f = img.at<cv::Vec3f>(r,c);
+            fs << v3f[0] << "," << v3f[1] << "," << v3f[2] << endl;
+        }
+    }
+    fs.close();
+}
+
+
 /**
  * @brief Main function of sample code
  * 
@@ -181,8 +238,8 @@ int main(int argc, char* argv[])
     }
     // assignments
     strDataPath = string(argv[1]);
-    int start_frame_num = atol(argv[2]);
-    int end_frame_num = atol(argv[3]);
+    int start_frame_idx = atol(argv[2]);
+    int end_frame_idx = atol(argv[3]);
     // read camera parameters
     map<string, float> params;
     if(!read_param(strParam, params)) {
@@ -191,6 +248,9 @@ int main(int argc, char* argv[])
     }
     float cx, cy, fx, fy;
     get_rgb_params(params, cx, cy, fx, fy);
+
+    // frame shift for debug
+    int frameShift = 0;
 
     // upsampling instance 
     upsampling dc;
@@ -205,7 +265,7 @@ int main(int argc, char* argv[])
     Upsampling_Params default_upsampling_params = upsampling_params;
     Preprocessing_Params default_preprocessing_params = preprocessing_params;
     // convert to trackbar parameters
-    int iRange_flood, iDilate_size, iCanny_th1, iCanny_th2, iOcc_th, iNeigbor_th, iFgs_lambda_flood, iFgs_sigma_flood, iFgs_iter_num, iConf;
+    int iRange_flood, iOcc_th, iNeigbor_th, iFgs_lambda_flood, iFgs_sigma_flood, iFgs_iter_num, iConf;
     convert_params_global2local(upsampling_params, preprocessing_params, 
                             iRange_flood, iDilate_size, iCanny_th1, iCanny_th2, iOcc_th, iNeigbor_th, iFgs_lambda_flood, iFgs_sigma_flood, iFgs_iter_num, iConf);
     
@@ -225,16 +285,16 @@ int main(int argc, char* argv[])
     chrono::system_clock::time_point t_start, t_end; 
 #endif
     int fixedFrame = 0; // 0: no fixed, 1: fixed
-    int frame_num = start_frame_num;
+    int curr_frame_idx = start_frame_idx;
     while(1) {
         // file names
-        cout << "frame = " << frame_num << endl;
+        cout << "frame = " << curr_frame_idx << " shift = " << frameShift << endl;
         char szFN[255];
-        sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strDataPath.c_str(), curr_frame_idx);
         string strGuide = string(szFN);
-        sprintf_s(szFN, "%s/%08d_spot_depth_pc.exr", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_spot_depth_pc.exr", strDataPath.c_str(), curr_frame_idx + frameShift);
         string strSpotPc = string(szFN);
-        sprintf_s(szFN, "%s/%08d_flood_depth_pc.exr", strDataPath.c_str(), frame_num);
+        sprintf_s(szFN, "%s/%08d_flood_depth_pc.exr", strDataPath.c_str(), curr_frame_idx + frameShift);
         string strFloodPc = string(szFN);
         // read dat
         cv::Mat imgGuide = cv::imread(strGuide, -1);
@@ -265,7 +325,11 @@ int main(int argc, char* argv[])
 #ifdef SHOW_TIME
         t_end = chrono::system_clock::now();
         auto elapsed = chrono::duration_cast<chrono::microseconds>(t_end - t_start).count();
-        cout << "\033[31;43mUpsampling total time = " << elapsed << " [us]\033[0m" << endl;
+#ifdef __TL10__
+        cout << "\033[31;43mUpsampling total time = " << elapsed << " [us]\033[0m" << " __TL10__"  << endl;
+#else        
+        cout << "\033[31;43mUpsampling total time = " << elapsed << " [us]\033[0m" << " __SUN__"  << endl;
+#endif
         g_FPS = (float)1000.f/(float)elapsed*1000.f;
 #endif
         if(res) {
@@ -274,6 +338,10 @@ int main(int argc, char* argv[])
             dmapSpot = dc.get_spot_depthMap();
             imgShow = visualization(imgGuide, dmapFlood, dmapSpot, dense, conf, (float)iConf/10000.f, mode);
             cv::imshow(strWndName, imgShow);
+#ifdef __TEST_GUIDE__
+            cv::Mat imgTestGuide = visualization_test(imgGuide);
+            cv::imshow("guide edge", imgTestGuide);
+#endif
         }
         char c= cv::waitKey(30);
         switch (c)
@@ -292,10 +360,14 @@ int main(int argc, char* argv[])
             break;
         case 's': // save dense and conf
             if (res) {
-                sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strDataPath.c_str(), frame_num);
+                sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strSavePath.c_str(), curr_frame_idx);
                 cv::imwrite(szFN, dense);
-                sprintf_s(szFN, "%s/%08d_conf.tiff", strDataPath.c_str(), frame_num);
+                sprintf_s(szFN, "%s/%08d_conf.tiff", strSavePath.c_str(), curr_frame_idx);
                 cv::imwrite(szFN, conf);
+                sprintf_s(szFN, "%s/%08d_color.png", strSavePath.c_str(), curr_frame_idx);
+                cv::imwrite(szFN, imgShow);
+                sprintf_s(szFN, "%s/%08d_flood.csv", strSavePath.c_str(), curr_frame_idx);
+                save_csv(pcFlood, szFN);
             }
             break;
         case 'r': // reset parameters to default
@@ -305,15 +377,36 @@ int main(int argc, char* argv[])
             cv::destroyWindow(strWndName);
             createWindow(strWndName, vecTrackbarLabels, vecTrackbarValues, vecTrackbarValueRanges);
             break;
+        case 'd': // disable preprocessing
+            disable_preprocessing(iCanny_th1, iCanny_th2, iOcc_th, iNeigbor_th);
+             // update window
+            cv::destroyWindow(strWndName);
+            createWindow(strWndName, vecTrackbarLabels, vecTrackbarValues, vecTrackbarValueRanges);
+            break;
         case 'p': // pause
             fixedFrame = 1 - fixedFrame;
+            break;
+        case '.': // forward
+            curr_frame_idx += 1;
+            break;
+        case ',': // backward
+            curr_frame_idx -= 1;
+            break;
+        case '-':
+            frameShift -= 1;
+            break;
+        case '=':
+            frameShift += 1;
+            break;
         default:
             break;
         }
         if (fixedFrame == 0)
-            frame_num += 1;
-        if(frame_num > end_frame_num)
-            frame_num = start_frame_num;
+            curr_frame_idx += 1;
+        if(curr_frame_idx > end_frame_idx) // repeat
+            curr_frame_idx = start_frame_idx;
+        if(curr_frame_idx < 0) // loop
+            curr_frame_idx = end_frame_idx;
         dmapFlood.release();
         imgGuide.release();
         dmapSpot.release();
