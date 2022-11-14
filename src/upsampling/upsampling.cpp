@@ -251,13 +251,115 @@ void upsampling::flood_depth_proc_without_edge(const cv::Mat& pc_flood)
 	});
 }
 
+void upsampling::set_debug_flag(int use_new_depth) // * set debug flag
+{
+	this->m_use_new_depth = use_new_depth;
+}
+
+const int g_grid_width = 20;
+const int g_grid_height = 20;
+const int g_grid_num_x = 960/g_grid_width;
+const int g_grid_num_y = 540/g_grid_height; 
+
+void upsampling::flood_depth_proc_with_edge_feeding(const cv::Mat& pc_flood)
+{
+	int width = this->m_guide_width_;
+	int height = this->m_guide_height_;
+	cv::Mat flood_dmap = this->m_flood_dmap_;
+	cv::Mat flood_mask = this->m_flood_mask_;
+	cv::Mat flood_range = this->m_flood_range_;
+	int r = this->m_range_flood_;
+
+	// feeding flag
+	int need_feeding[g_grid_num_x][g_grid_num_y] = {0};
+	int fi, fj;
+	// u map
+	cv::Mat pc_cpy;
+	pc_flood.copyTo(pc_cpy);
+    for (int y = 0; y < this->m_grid_height_; ++y) {
+		// first pixel 
+		int x = 0;
+		float z = pc_cpy.at<cv::Vec3f>(y, x)[2];
+		float uf = pc_cpy.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
+		float vf = pc_cpy.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
+		int u = static_cast<int>(std::round(uf));
+		int v = static_cast<int>(std::round(vf));
+		if (u >= 0 && u < width && v >= 0 && v < height) { 
+			flood_dmap.at<float>(v, u) = z;
+			flood_mask.at<float>(v, u) = 1.0;
+			mark_block(flood_range, u, v, r);
+			// * fleeding flag
+			fi = u/g_grid_width;
+			fj = v/g_grid_height; 
+			need_feeding[fi][fj] = 1;
+		} // TODO: else
+		float z_left = z;
+		float u_left = uf;	
+		// loop to line end
+        for (x = 1; x < this->m_grid_width_; ++x) {
+            z = pc_flood.at<cv::Vec3f>(y, x)[2];
+            uf = pc_flood.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
+            vf = pc_flood.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
+			u = static_cast<int>(std::round(uf));
+			v = static_cast<int>(std::round(vf));
+			if (u >= 0 && u < width && v >= 0 && v < height) {
+				fi = u/g_grid_width;
+				fj = v/g_grid_height; 
+				need_feeding[fi][fj] = 1;
+			} else { // invalid value
+				continue;
+			}
+
+			float z_diff; // z difference
+			float z_diff_per; // z difference percentage
+			float u_diff; // u difference
+			if (!isnan(uf) && isnan(u_left)) { // not occlusion
+                u_diff = this->m_occlusion_thresh_ + 1;
+            } else {
+				u_diff = uf - u_left;
+			}
+			z_diff_per = FLT_EPSILON;
+			if (!isnan(z)) {
+				if (!isnan(z_left)) {
+					z_diff = abs(z - z_left);
+					z_diff_per = z_diff/z;//mm
+				}
+			}
+			// justification
+			if (u_diff < this->m_occlusion_thresh_ && z_diff_per > this->m_z_continuous_thresh_) { //remove
+				;
+			} else { // converto depthmap
+				flood_dmap.at<float>(v, u) = z;
+				flood_mask.at<float>(v, u) = 1.0;
+				mark_block(flood_range, u, v, r);
+				// ! fixed
+				if (u_left < uf) {
+				u_left = uf;
+					z_left = z;
+				}
+			}
+        }
+    }
+	//* add feeding points
+	for (int j = 0; j < g_grid_num_y; ++j) {
+		for (int i = 0; i < g_grid_num_x; ++i) {
+			if (need_feeding[i][j] == 0) {
+				int u = g_grid_width * i + g_grid_width/2;
+				int v = g_grid_height * j + g_grid_height/2;
+				flood_dmap.at<float>(v, u) = 10.0;
+				flood_mask.at<float>(v, u) = -1.0;
+				mark_block(flood_range, u, v, r);
+			}
+		}
+	}
+}
 
 /**
  * @brief depth preprocessing with edge processing
  * 
  * @param pc_flood 
  */
-void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
+void upsampling::flood_depth_proc_with_edge_checked(const cv::Mat& pc_flood)
 {
 	int width = this->m_guide_width_;
 	int height = this->m_guide_height_;
@@ -276,11 +378,11 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 		float vf = pc_cpy.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
 		int u = static_cast<int>(std::round(uf));
 		int v = static_cast<int>(std::round(vf));
-		if (u >= 0 && u < width && v >= 0 && v < height) {
+		if (u >= 0 && u < width && v >= 0 && v < height) { 
 			flood_dmap.at<float>(v, u) = z;
 			flood_mask.at<float>(v, u) = 1.0;
 			mark_block(flood_range, u, v, r);
-		}
+		} // TODO: else
 		float z_left = z;
 		float u_left = uf;	
 		// loop to line end
@@ -313,13 +415,22 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 					flood_dmap.at<float>(v, u) = z;
 					flood_mask.at<float>(v, u) = 1.0;
 					mark_block(flood_range, u, v, r);
+					// ! fixed
+					if (u_left < uf) {
+						u_left = uf;
+						z_left = z;
+					}
 				}
 			}
-			z_left = z;
-			u_left = uf;
         }
     }
 }
+
+void upsampling::flood_guide_proc_alternative(const cv::Mat& guide)
+{
+
+}
+
 
 /**
  * @brief depth preprocessing
@@ -329,7 +440,11 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
 {
 	if (this->m_depth_edge_proc_on_) {
-		this->flood_depth_proc_with_edge(pc_flood);
+		if (this->m_use_new_depth == 3) { // * debug feeding 
+			this->flood_depth_proc_with_edge_feeding(pc_flood);
+		} else if (this->m_use_new_depth == 0) { //* fixed original edge proc 
+			this->flood_depth_proc_with_edge_checked(pc_flood);
+		}
 	} else {
 		this->flood_depth_proc_without_edge(pc_flood);
 	}
@@ -492,8 +607,13 @@ void upsampling::run_flood(const cv::Mat& img_guide, const cv::Mat& pc_flood, cv
 	std::cout << "FGS processing time = " << elapsed << " [us]" << std::endl;
 #endif
 	// fill invalid regions
-	dense.setTo(std::nan(""), this->m_flood_range_ == 0.0);
-	conf.setTo(std::nan(""), this->m_flood_range_ == 0.0);
+	if (this->m_use_new_depth == 3) {
+		dense.setTo(std::nan(""), this->m_flood_range_ <= 0.0);
+		conf.setTo(std::nan(""), this->m_flood_range_ <= 0.0);
+	} else {
+		dense.setTo(std::nan(""), this->m_flood_range_ == 0.0);
+		conf.setTo(std::nan(""), this->m_flood_range_ == 0.0);
+	}
 }
 
 /**

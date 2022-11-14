@@ -55,6 +55,7 @@ public:
 	cv::Mat get_spot_depthMap() {return this->m_spot_dmap_;};
 	// convert depth map to point cloud
 	void depth2pc(const cv::Mat& depth, cv::Mat& pc);
+	void set_debug_flag(int use_new_depth); // * set debug flag
 private:
 	void clear(); // clear temperary variables
 	void initialization(cv::Mat& dense, cv::Mat& conf); // initialization
@@ -68,10 +69,13 @@ private:
 	void flood_guide_proc(const cv::Mat& guide); // guide image processing for flood
 	void flood_guide_proc2(const cv::Mat& guide); // guide image processing 2 for flood
 	void flood_depth_proc(const cv::Mat& pc_flood); // depth processing for flood
-	void flood_depth_proc_with_edge(const cv::Mat& pc_flood);
+	void flood_depth_proc_with_edge_feeding(const cv::Mat& pc_flood); // * for debug
+	void flood_depth_proc_with_edge_checked(const cv::Mat& pc_flood); // * fixed edge processing
+	void flood_guide_proc_alternative(const cv::Mat& guide); // * for debug
 	void flood_depth_proc_without_edge(const cv::Mat& pc_flood);
 	void flood_preprocessing(const cv::Mat& guide, const cv::Mat& pc_flood); // preprocessing for flood
 private:
+	int m_use_new_depth = 0;
 	const int m_guide_width_ = 960; // guide image width 
 	const int m_guide_height_ = 540; // guide image height
 	const int m_grid_width_ = 80; // flood depth grid width

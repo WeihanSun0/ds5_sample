@@ -1,6 +1,3 @@
-from tkinter import N
-from venv import create
-from xmlrpc.client import MININT
 import cv2 as cv
 import numpy as np
 import math

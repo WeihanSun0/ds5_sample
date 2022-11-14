@@ -1,9 +1,9 @@
 /**
- * @file sample.cpp
+ * @file forOno.cpp
  * @author Weihan.Sun (weihan.sun@sony.com)
- * @brief sample application
+ * @brief save upsampling results
  * @version 0.1
- * @date 2022-07-12
+ * @date 2022-11-08
  * 
  * @copyright Copyright (c) 2022
  * 
@@ -17,28 +17,21 @@
 #include <thread>
 #include <vector>
 #include "playground.hpp"
-#include "viewer.hpp"
 
 using namespace std;
 
 #define SHOW_TIME 
-#define __TEST_GUIDE__
-#define __TL10__
+#define AUTO_SAVE
+// #define __TEST_GUIDE__
 
 const string rootPath = "../../";
 string strDataPath;
 string strSavePath = ".";
 
-#define FIX_COLORMAP
-#ifdef FIX_COLORMAP
-float g_min_value = 0.0;
-float g_max_value = 1.0;
-#endif
-
 #ifdef __TL10__
-const string strParam = rootPath + "dat/camParam/camera_calib/param_tl10.txt";
+const string strParam = rootPath + "dat/camParam/camera_calib/param_TL10.txt";
 #else
-const string strParam = rootPath + "dat/camParam/camera_calib/param_sun.txt";
+const string strParam = rootPath + "dat/camParam/camera_calib/param_ono.txt";
 #endif
 
 float g_FPS = 0.0;
@@ -58,13 +51,11 @@ void guide_edge_extraction(const cv::Mat& guide, cv::Mat & imgEdgeGuide, cv::Mat
 //* draw edge detection results
 cv::Mat visualization_test(const cv::Mat& guide)
 {
-    cv::Mat imgGuideEdge, imgBoarder;
+     cv::Mat imgGuideEdge, imgBoarder;
     guide_edge_extraction(guide, imgGuideEdge, imgBoarder);
-    // cout << "old = " << imgGuideEdge.type() << endl;
-    cv::Mat imgMarkedEdge = markEdge(guide, imgBoarder, cv::Vec3b(255, 0, 0));
     vector<cv::Mat> vecImgs;
     vector<string> vecLabel;
-    vecImgs.push_back(imgMarkedEdge);
+    vecImgs.push_back(guide);
     vecLabel.push_back("guide");
     // vecImgs.push_back(imgGuideEdge);
     // vecLabel.push_back("edge");
@@ -73,37 +64,10 @@ cv::Mat visualization_test(const cv::Mat& guide)
     return mergeImages(vecImgs, vecLabel, cv::Size(2,1));
 }
 
-//* try alternative edge detection
-cv::Mat visualization_test3(const cv::Mat& guide)
-{
-    cv::Mat imgGuideEdge;
-    imgGuideEdge = sobel_edge_detection(guide, 50, iDilate_size);
-    // cout << "new = " << imgGuideEdge.type() << endl;
-    cv::Mat imgMarkedEdge = markEdge(guide, imgGuideEdge, cv::Vec3b(255, 0, 0));
-    vector<cv::Mat> vecImgs;
-    vector<string> vecLabel;
-    vecImgs.push_back(imgMarkedEdge);
-    vecLabel.push_back("guide");
-    vecImgs.push_back(imgGuideEdge);
-    vecLabel.push_back("edge");
-    return mergeImages(vecImgs, vecLabel, cv::Size(2,1));
-}
-
-cv::Mat visualization_test_edge(const cv::Mat& cur_guide, const cv::Mat& last_guide, const cv::Mat& cur_depth, const cv::Mat& last_depth)
-{
-    cv::Mat imgGuideEdge, imgDepthEdge;
-    imgGuideEdge = EVS_guide_edge_detection(cur_guide, last_guide);
-    vector<cv::Mat> vecImgs;
-    vector<string> vecLabel;
-    vecImgs.push_back(imgGuideEdge);
-    vecLabel.push_back("guide edge");
-    return mergeImages(vecImgs, vecLabel, cv::Size(1, 1)); 
-}
-
 
 
 //* debug: depth edge
-cv::Mat visualization_depth_grid(const cv::Mat& pc_flood, const Camera_Params& params)
+cv::Mat visualization_test2(const cv::Mat& pc_flood, const Camera_Params& params)
 {
     int width = 80;
     int height = 60;
@@ -125,21 +89,21 @@ cv::Mat visualization_depth_grid(const cv::Mat& pc_flood, const Camera_Params& p
     cv::minMaxLoc(depthGrid, &minVal, &maxVal);
     cv::Mat color_grid = z2colormap(depthGrid, minVal, maxVal);
     cv::Mat scaled_color_grid = enlarge_grid(color_grid, 8);
-    cv::Mat edge = extract_depth_edge(pc_flood);
-    cv::minMaxLoc(edge, &minVal, &maxVal);
-    cv::Mat color_edge = z2colormap(edge, minVal, maxVal);
-    cv::Mat scaled_color_edge = enlarge_grid(color_edge, 8);
+    // cv::Mat normalized_grid = depthGrid - minVal;
+	// normalized_grid.convertTo(normalized_grid, CV_8U, 255. / (maxVal - minVal));
+    // cv::Mat depth_edge = sobel_edge_detection_8U(depthGrid, 3);
+    // cv::Mat scaled_edge = enlarge_grid(depth_edge, 8);
+    // 
     vector<cv::Mat> vecImgs;
     vector<string> vecLabel;
     char szLabel[255];
     vecImgs.push_back(scaled_color_grid);
     sprintf_s(szLabel, "grid");
     vecLabel.push_back(szLabel);
-    // test
-    vecImgs.push_back(scaled_color_edge);
-    sprintf_s(szLabel, "edge");
-    vecLabel.push_back(szLabel);
-    return mergeImages(vecImgs, vecLabel, cv::Size(2, 1));
+    // vecImgs.push_back(scaled_edge);
+    // sprintf_s(szLabel, "edge");
+    // vecLabel.push_back(szLabel);
+    return mergeImages(vecImgs, vecLabel, cv::Size(1, 1));
 }
 
 /**
@@ -159,15 +123,10 @@ cv::Mat visualization(const cv::Mat& guide, const cv::Mat& dmapFlood, const cv::
 {
     // input 
     double minVal, maxVal;
-#ifdef FIX_COLORMAP
-    cv::Mat colorDmapFlood = z2colormap(dmapFlood, g_min_value, g_max_value);
-    cv::Mat colorDmapSpot = z2colormap(dmapSpot, g_min_value, g_max_value);
-#else
     cv::minMaxLoc(dmapFlood, &minVal, &maxVal);
     cv::Mat colorDmapFlood = z2colormap(dmapFlood, minVal, maxVal);
     cv::minMaxLoc(dmapSpot, &minVal, &maxVal);
     cv::Mat colorDmapSpot = z2colormap(dmapSpot, minVal, maxVal);
-#endif
 
     cv::Mat imgMaskFlood = cv::Mat::zeros(dmapFlood.size(), dmapFlood.type());
     cv::Mat imgMaskSpot = cv::Mat::zeros(dmapSpot.size(), dmapSpot.type());
@@ -179,18 +138,11 @@ cv::Mat visualization(const cv::Mat& guide, const cv::Mat& dmapFlood, const cv::
     cv::Mat imgFiltered;
     dense.copyTo(imgFiltered);
     imgFiltered.setTo(std::nan(""), conf < conf_thresh);
-#ifdef FIX_COLORMAP
-    minVal = g_min_value;
-    maxVal = g_max_value;
-#else
     cv::minMaxLoc(imgFiltered, &minVal, &maxVal);
-#endif
     cv::Mat colorFiltered = z2colormap(imgFiltered, minVal, maxVal);
     cv::Mat imgOverlapFiltered = overlap(colorFiltered, guide, 0.5);
     // output
-#ifndef FIX_COLORMAP
     cv::minMaxLoc(dense, &minVal, &maxVal);
-#endif
     cv::Mat colorDense = z2colormap(dense, minVal, maxVal);
     cv::Mat imgOverlapDense = overlap(colorDense, guide, 0.5);
         //
@@ -250,9 +202,12 @@ inline void convert_params_global2local(const Upsampling_Params& upsampling_para
                                 int& iNeigbor_th, int& iFgs_lambda_flood, int& iFgs_sigma_flood, int& iFgs_iter_num, int& iConf)
 {
     iRange_flood = preprocessing_params.range_flood;
-    iDilate_size = preprocessing_params.guide_edge_dilate_size;
-    iCanny_th1 = preprocessing_params.canny_thresh1;
-    iCanny_th2 = preprocessing_params.canny_thresh2;
+    // iDilate_size = preprocessing_params.guide_edge_dilate_size;
+    iDilate_size = 8; 
+    // iCanny_th1 = preprocessing_params.canny_thresh1;
+    // iCanny_th2 = preprocessing_params.canny_thresh2;
+    iCanny_th1 = 95; 
+    iCanny_th2 = 200;
     iFgs_lambda_flood = (int)upsampling_params.fgs_lambda_flood;
     iFgs_sigma_flood = (int)upsampling_params.fgs_sigma_color_flood;
     iOcc_th= (int)(preprocessing_params.occlusion_thresh*10);
@@ -324,14 +279,15 @@ void save_csv(const cv::Mat& img, const string& strFileName)
 int main(int argc, char* argv[])
 {
     // argument check 
-    if (argc != 4) {
+    if (argc != 5) {
         cout << "*** DS5 Upsampling sample application ***" << endl;
         cout << "USAGE:" << endl;
-        cout << "   <exe> <input data path> <start frame ID> <end frame ID>" << endl;
+        cout << "   <exe> <input data path> <start frame ID> <end frame ID> <save data path>" << endl;
         exit(0);
     }
     // assignments
     strDataPath = string(argv[1]);
+    strSavePath = string(argv[4]);
     int start_frame_idx = atol(argv[2]);
     int end_frame_idx = atol(argv[3]);
     // read camera parameters
@@ -374,27 +330,18 @@ int main(int argc, char* argv[])
     // images
     cv::Mat dmapFlood, dmapSpot; // input
     cv::Mat dense, conf, imgShow; // output
-    cv::Mat dmap_filtered, pc_filtered;
-    // viewer pc
-    myViz viz;	
-    int showViz = 0; // 1: show point cloud
-    int remove_depth_edge = 0;
+
     char mode = '1'; // 1: flood 2: spot 3: flood + spot q: exit
 #ifdef SHOW_TIME
     chrono::system_clock::time_point t_start, t_end; 
 #endif
     int fixedFrame = 0; // 0: no fixed, 1: fixed
     int curr_frame_idx = start_frame_idx;
-    cv::Mat last_guide, last_depth;
     while(1) {
         // file names
         cout << "frame = " << curr_frame_idx << " shift = " << frameShift << endl;
         if (use_new_depth != 0) {
             cout << "use new depth = " << use_new_depth << endl;
-        }
-        if (curr_frame_idx == 0) {
-            last_guide.release();
-            last_depth.release();
         }
         char szFN[255];
         sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strDataPath.c_str(), curr_frame_idx);
@@ -415,23 +362,14 @@ int main(int argc, char* argv[])
 #ifdef SHOW_TIME
         t_start = chrono::system_clock::now();
 #endif 
-        //! test remove depth edge
-        cv::Mat new_pcFlood;
-        if (remove_depth_edge == 1) {
-            new_pcFlood = remove_depth_edge_func(pcFlood);
-        } else {
-            pcFlood.copyTo(new_pcFlood);
-        }
         // upsampling processing  
         bool res = false; // upsampling success or not
         if (mode == '1') {
-            // res = dc.run(imgGuide, pcFlood, cv::Mat(), dense, conf);
-            res = dc.run(imgGuide, new_pcFlood, cv::Mat(), dense, conf);
+            res = dc.run(imgGuide, pcFlood, cv::Mat(), dense, conf);
         } else if (mode == '2') {
             res = dc.run(imgGuide, cv::Mat(), pcSpot, dense, conf);
         } else if (mode == '3') {
-            // res = dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
-            res = dc.run(imgGuide, new_pcFlood, pcSpot, dense, conf);
+            res = dc.run(imgGuide, pcFlood, pcSpot, dense, conf);
         } else if (mode == 'q') {
             break;
         } else {
@@ -454,20 +392,29 @@ int main(int argc, char* argv[])
             dmapSpot = dc.get_spot_depthMap();
             imgShow = visualization(imgGuide, dmapFlood, dmapSpot, dense, conf, (float)iConf/10000.f, mode);
             cv::imshow(strWndName, imgShow);
-            dmap_filtered = get_filtered_dense(dense, conf, (float)iConf/10000.f);
 #ifdef __TEST_GUIDE__
-            // cv::Mat imgTestGuide = visualization_test(imgGuide);
-            // cv::imshow("original guide edge", imgTestGuide);
-            cv::imshow("filtered", dmap_filtered);
-            cv::Mat imgTestDepth = visualization_depth_grid(pcFlood, cam_params);
+            cv::Mat imgTestGuide = visualization_test(imgGuide);
+            cv::imshow("original guide edge", imgTestGuide);
+            cv::Mat imgTestDepth = visualization_test2(pcFlood, cam_params);
             cv::imshow("depth edge", imgTestDepth);
             // cv::Mat imgTestGuideNewEdge = visualization_test3(imgGuide);
             // cv::imshow("new guide edge", imgTestGuideNewEdge);
-            // cv::Mat imgEVSGuideEdge = visualization_test_edge(imgGuide, last_guide, pcFlood, last_depth);
-            // cv::imshow("evs guide edge", imgEVSGuideEdge);
 #endif
         }
         char c= cv::waitKey(30);
+#ifdef AUTO_SAVE
+        cv::Mat filtered = get_filtered_dense(dense, conf, (float)iConf/10000.0f);
+        cv::Mat pc_filtered;
+        dc.depth2pc(filtered, pc_filtered);
+        sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strSavePath.c_str(), curr_frame_idx);
+        cv::imwrite(szFN, filtered);
+        sprintf_s(szFN, "%s/%08d_dense_pc.exr", strSavePath.c_str(), curr_frame_idx);
+        cv::imwrite(szFN, pc_filtered);
+        sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strSavePath.c_str(), curr_frame_idx);
+        cv::imwrite(szFN, imgGuide);
+        sprintf_s(szFN, "%s/%08d_flood_pc.exr", strSavePath.c_str(), curr_frame_idx);
+        cv::imwrite(szFN, pcFlood);
+#endif
         switch (c)
         {
         case '1': // input flood only
@@ -484,14 +431,18 @@ int main(int argc, char* argv[])
             break;
         case 's': // save dense and conf
             if (res) {
+                // filtered by conf 
+                cv::Mat filtered = get_filtered_dense(dense, conf, (float)iConf/10000.0f);
+                cv::Mat pc_filtered;
+                dc.depth2pc(filtered, pc_filtered);
                 sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strSavePath.c_str(), curr_frame_idx);
-                cv::imwrite(szFN, dense);
-                sprintf_s(szFN, "%s/%08d_conf.tiff", strSavePath.c_str(), curr_frame_idx);
-                cv::imwrite(szFN, conf);
-                sprintf_s(szFN, "%s/%08d_color.png", strSavePath.c_str(), curr_frame_idx);
-                cv::imwrite(szFN, imgShow);
-                // sprintf_s(szFN, "%s/%08d_flood.csv", strSavePath.c_str(), curr_frame_idx);
-                // save_csv(pcFlood, szFN);
+                cv::imwrite(szFN, filtered);
+                sprintf_s(szFN, "%s/%08d_dense_pc.exr", strSavePath.c_str(), curr_frame_idx);
+                cv::imwrite(szFN, pc_filtered);
+                sprintf_s(szFN, "%s/%08d_rgb_gray_img.png", strSavePath.c_str(), curr_frame_idx);
+                cv::imwrite(szFN, imgGuide);
+                sprintf_s(szFN, "%s/%08d_flood_pc.exr", strSavePath.c_str(), curr_frame_idx);
+                cv::imwrite(szFN, pcFlood);
             }
             break;
         case 'r': // reset parameters to default
@@ -506,9 +457,6 @@ int main(int argc, char* argv[])
              // update window
             cv::destroyWindow(strWndName);
             createWindow(strWndName, vecTrackbarLabels, vecTrackbarValues, vecTrackbarValueRanges);
-            break;
-        case 'n': // remove depth edge
-            remove_depth_edge = 1 - remove_depth_edge;
             break;
         case 'g': // * debug: fix bug in depth edge process
             if (use_new_depth == 2)
@@ -527,8 +475,6 @@ int main(int argc, char* argv[])
         case 'p': // pause
             fixedFrame = 1 - fixedFrame;
             break;
-        case 'v': // view point cloud
-            showViz = 1 - showViz;
         case '.': // forward
             curr_frame_idx += 1;
             break;
@@ -544,22 +490,12 @@ int main(int argc, char* argv[])
         default:
             break;
         }
-        if (showViz == 1) {
-            viz.set(pcFlood, cv::viz::Color::green(), 5);
-            dc.depth2pc(dmap_filtered, pc_filtered);
-            viz.set(pc_filtered, imgGuide, 3);
-            viz.show(true);
-        }
-        if (fixedFrame == 0) { // not paused
+        if (fixedFrame == 0)
             curr_frame_idx += 1;
-            imgGuide.copyTo(last_guide);
-            pcFlood.copyTo(last_depth);
-        }
         if(curr_frame_idx > end_frame_idx) // repeat
             curr_frame_idx = start_frame_idx;
         if(curr_frame_idx < 0) // loop
             curr_frame_idx = end_frame_idx;
-        
         dmapFlood.release();
         imgGuide.release();
         dmapSpot.release();

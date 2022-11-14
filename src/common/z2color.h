@@ -177,3 +177,23 @@ cv::Mat markSparseDepth(const cv::Mat& imgRGB, const cv::Mat& sparseDepth, const
 	return img;
 }
 
+cv::Mat markEdge(const cv::Mat& imgRGB, const cv::Mat& imgEdge, const cv::Vec3b& color)
+{
+	cv::Mat img;
+	imgRGB.copyTo(img);
+	if (img.channels() == 1)
+		cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
+	int width = imgRGB.cols;
+	int height = imgRGB.rows;
+	imgEdge.forEach<uchar>([&img, &color](uchar& pixel, const int pos[]) -> void {
+		if (pixel == 255) { // edge
+			int x = pos[1];
+			int y = pos[0];
+			img.at<cv::Vec3b>(y, x)[0] = color[0];
+			img.at<cv::Vec3b>(y, x)[1] = color[1];
+			img.at<cv::Vec3b>(y, x)[2] = color[2];
+		}
+	});
+	return img;
+}
+

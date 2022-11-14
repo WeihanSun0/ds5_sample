@@ -47,3 +47,5 @@ endif()
 
 
 add_subdirectory(src)
+add_subdirectory(src/forSDS)
+add_subdirectory(src/forOno)
