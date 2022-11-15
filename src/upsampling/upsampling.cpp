@@ -293,18 +293,18 @@ void upsampling::flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood)
 					u_diff = uf - u_left;
 					if (u_diff < this->m_occlusion_thresh_ && z_diff_per > this->m_z_continuous_thresh_) {
 						//remove
-						;
+						continue;
 					} else {
-						// insert 
-						flood_dmap.at<float>(v, u) = z;
-						flood_mask.at<float>(v, u) = 1.0;
-						mark_block(flood_range, u, v, r);
 						if (u_left < uf) {
 							u_left = uf;
 							z_left = z;
 						}
 					}
 				}
+				// insert 
+				flood_dmap.at<float>(v, u) = z;
+				flood_mask.at<float>(v, u) = 1.0;
+				mark_block(flood_range, u, v, r);
 			}
 		}
 	}
