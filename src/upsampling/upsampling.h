@@ -70,7 +70,8 @@ private:
 	void flood_guide_proc2(const cv::Mat& guide); // guide image processing 2 for flood
 	void flood_depth_proc(const cv::Mat& pc_flood); // depth processing for flood
 	void flood_depth_proc_with_edge_feeding(const cv::Mat& pc_flood); // * for debug
-	void flood_depth_proc_with_edge_checked(const cv::Mat& pc_flood); // * fixed edge processing
+	void flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood); // * fixed edge processing
+	void flood_depth_proc_with_edge_checked(const cv::Mat& pc_flood); // * debug edge processing
 	void flood_guide_proc_alternative(const cv::Mat& guide); // * for debug
 	void flood_depth_proc_without_edge(const cv::Mat& pc_flood);
 	void flood_preprocessing(const cv::Mat& guide, const cv::Mat& pc_flood); // preprocessing for flood

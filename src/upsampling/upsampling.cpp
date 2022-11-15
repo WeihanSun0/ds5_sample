@@ -355,6 +355,64 @@ void upsampling::flood_depth_proc_with_edge_feeding(const cv::Mat& pc_flood)
 }
 
 /**
+ * @brief depth preprocessing with edge processing fixed bugs
+ * 
+ * @param pc_flood 
+ */
+void upsampling::flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood)
+{
+	int width = this->m_guide_width_;
+	int height = this->m_guide_height_;
+	cv::Mat flood_dmap = this->m_flood_dmap_;
+	cv::Mat flood_mask = this->m_flood_mask_;
+	cv::Mat flood_range = this->m_flood_range_;
+	int r = this->m_range_flood_;
+
+	// declaration
+	float z, uf, vf;
+	float z_left, u_left; // save left u, z
+	float z_diff, u_diff, z_diff_per; // difference 
+	int u, v;
+	for (int y = 0; y < this->m_grid_height_; ++y) {
+		z_left = std::nan("");
+		u_left = -1;
+		for (int x = 0; x < this->m_grid_width_; ++x) {
+			z = pc_flood.at<cv::Vec3f>(y, x)[2];
+			if (isnan(z)) { //remove 
+				continue;
+			}
+			uf = pc_flood.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
+			vf = pc_flood.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
+			u = static_cast<int>(std::round(uf));
+			v = static_cast<int>(std::round(vf));
+			if (u >= 0 && u < width && v >= 0 && v < height) { 
+				if (isnan(z_left)) { // new left
+					z_left = z;
+					u_left = uf;
+				} else {
+					z_diff = abs(z - z_left);
+					z_diff_per = z_diff / z;
+					u_diff = uf - u_left;
+					if (u_diff < this->m_occlusion_thresh_ && z_diff_per > this->m_z_continuous_thresh_) {
+						//remove
+						continue;
+					} else {
+						if (u_left < uf) {
+							u_left = uf;
+							z_left = z;
+						}
+					}
+				}
+				// insert 
+				flood_dmap.at<float>(v, u) = z;
+				flood_mask.at<float>(v, u) = 1.0;
+				mark_block(flood_range, u, v, r);
+			}
+		}
+	}
+}
+
+/**
  * @brief depth preprocessing with edge processing
  * 
  * @param pc_flood 
@@ -443,7 +501,7 @@ void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
 		if (this->m_use_new_depth == 3) { // * debug feeding 
 			this->flood_depth_proc_with_edge_feeding(pc_flood);
 		} else if (this->m_use_new_depth == 0) { //* fixed original edge proc 
-			this->flood_depth_proc_with_edge_checked(pc_flood);
+			this->flood_depth_proc_with_edge_fixed(pc_flood);
 		}
 	} else {
 		this->flood_depth_proc_without_edge(pc_flood);
