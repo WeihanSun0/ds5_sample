@@ -68,7 +68,7 @@ private:
 	void flood_guide_proc(const cv::Mat& guide); // guide image processing for flood
 	void flood_guide_proc2(const cv::Mat& guide); // guide image processing 2 for flood
 	void flood_depth_proc(const cv::Mat& pc_flood); // depth processing for flood
-	void flood_depth_proc_with_edge(const cv::Mat& pc_flood);
+	void flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood);
 	void flood_depth_proc_without_edge(const cv::Mat& pc_flood);
 	void flood_preprocessing(const cv::Mat& guide, const cv::Mat& pc_flood); // preprocessing for flood
 private:

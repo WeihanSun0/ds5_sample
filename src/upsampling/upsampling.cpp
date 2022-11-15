@@ -251,13 +251,13 @@ void upsampling::flood_depth_proc_without_edge(const cv::Mat& pc_flood)
 	});
 }
 
-
 /**
  * @brief depth preprocessing with edge processing
+ * fixed bugs on jusitification of parallax deviation
  * 
  * @param pc_flood 
  */
-void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
+void upsampling::flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood)
 {
 	int width = this->m_guide_width_;
 	int height = this->m_guide_height_;
@@ -265,62 +265,51 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 	cv::Mat flood_mask = this->m_flood_mask_;
 	cv::Mat flood_range = this->m_flood_range_;
 	int r = this->m_range_flood_;
-	// u map
-	cv::Mat u_map=cv::Mat::zeros(pc_flood.size(), CV_32FC1);
-	cv::Mat pc_cpy;
-	pc_flood.copyTo(pc_cpy);
-    for (int y = 0; y < this->m_grid_height_; ++y) {
-		// first pixel 
-		int x = 0;
-		float z = pc_cpy.at<cv::Vec3f>(y, x)[2];
-		float uf = pc_cpy.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
-		float vf = pc_cpy.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
-		int u = static_cast<int>(std::round(uf));
-		int v = static_cast<int>(std::round(vf));
-		if (u >= 0 && u < width && v >= 0 && v < height) {
-			flood_dmap.at<float>(v, u) = z;
-			flood_mask.at<float>(v, u) = 1.0;
-			mark_block(flood_range, u, v, r);
-		}
-		float z_left = z;
-		float u_left = uf;	
-		// loop to line end
-        for (x = 1; x < this->m_grid_width_; ++x) {
-            z = pc_flood.at<cv::Vec3f>(y, x)[2];
-            uf = pc_flood.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
-            vf = pc_flood.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
-			float z_diff; // z difference
-			float z_diff_per; // z difference percentage
-			float u_diff; // u difference
-			if (!isnan(uf) && isnan(u_left)) { // not occlusion
-                u_diff = this->m_occlusion_thresh_ + 1;
-            } else {
-				u_diff = uf - u_left;
+
+	// declaration
+	float z, uf, vf;
+	float z_left, u_left; // save left u, z
+	float z_diff, u_diff, z_diff_per; // difference 
+	int u, v;
+	for (int y = 0; y < this->m_grid_height_; ++y) {
+		z_left = std::nan("");
+		u_left = -1;
+		for (int x = 0; x < this->m_grid_width_; ++x) {
+			z = pc_flood.at<cv::Vec3f>(y, x)[2];
+			if (isnan(z)) { //remove 
+				continue;
 			}
-			z_diff_per = FLT_EPSILON;
-			if (!isnan(z)) {
-				if (!isnan(z_left)) {
+			uf = pc_flood.at<cv::Vec3f>(y, x)[0] * this->m_fx_ / z + this->m_cx_;
+			vf = pc_flood.at<cv::Vec3f>(y, x)[1] * this->m_fy_ / z + this->m_cy_;
+			u = static_cast<int>(std::round(uf));
+			v = static_cast<int>(std::round(vf));
+			if (u >= 0 && u < width && v >= 0 && v < height) { 
+				if (isnan(z_left)) { // new left
+					z_left = z;
+					u_left = uf;
+				} else {
 					z_diff = abs(z - z_left);
-					z_diff_per = z_diff/z;//mm
+					z_diff_per = z_diff / z;
+					u_diff = uf - u_left;
+					if (u_diff < this->m_occlusion_thresh_ && z_diff_per > this->m_z_continuous_thresh_) {
+						//remove
+						;
+					} else {
+						// insert 
+						flood_dmap.at<float>(v, u) = z;
+						flood_mask.at<float>(v, u) = 1.0;
+						mark_block(flood_range, u, v, r);
+						if (u_left < uf) {
+							u_left = uf;
+							z_left = z;
+						}
+					}
 				}
 			}
-			// justification
-			if (u_diff < this->m_occlusion_thresh_ || z_diff_per > this->m_z_continuous_thresh_) { //remove
-				;
-			} else { // converto depthmap
-				u = static_cast<int>(std::round(uf));
-				v = static_cast<int>(std::round(vf));
-				if (u >= 0 && u < width && v >= 0 && v < height) {
-					flood_dmap.at<float>(v, u) = z;
-					flood_mask.at<float>(v, u) = 1.0;
-					mark_block(flood_range, u, v, r);
-				}
-			}
-			z_left = z;
-			u_left = uf;
-        }
-    }
+		}
+	}
 }
+
 
 /**
  * @brief depth preprocessing
@@ -330,7 +319,7 @@ void upsampling::flood_depth_proc_with_edge(const cv::Mat& pc_flood)
 void upsampling::flood_depth_proc(const cv::Mat& pc_flood)
 {
 	if (this->m_depth_edge_proc_on_) {
-		this->flood_depth_proc_with_edge(pc_flood);
+		this->flood_depth_proc_with_edge_fixed(pc_flood);
 	} else {
 		this->flood_depth_proc_without_edge(pc_flood);
 	}

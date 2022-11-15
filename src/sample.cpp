@@ -78,11 +78,11 @@ cv::Mat visualization(const cv::Mat& guide, const cv::Mat& dmapFlood, const cv::
         sprintf_s(szLabel, "spot (FPS = %.2f)", g_FPS);
         vecLabel.push_back(szLabel);
     }
-    vecImgs.push_back(imgOverlapDense);
-    vecLabel.push_back("dense");
+    // vecImgs.push_back(imgOverlapDense);
+    // vecLabel.push_back("dense");
     vecImgs.push_back(imgOverlapFiltered);
     vecLabel.push_back("filtered");
-    return mergeImages(vecImgs, vecLabel, cv::Size(3, 1));
+    return mergeImages(vecImgs, vecLabel, cv::Size(2, 1));
 }
 
 /**
