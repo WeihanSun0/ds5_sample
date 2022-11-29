@@ -40,7 +40,7 @@
 * 2022/8/8 (ver 1.0)　初期バージョン
 * 2022/8/24 (ver 1.1)　DSViewerでの保存ファイル名の対応 
 * 2022/10/17 (ver 1.1.1)　DSViewerでの保存ファイル変換スクリプトの更新(Timestampの一致するフレームを同じFrame_IDにする) (7.2章更新)
-
+* 2022/11/17 (ver 1.1.2) Upsampling前処理のバグ修正。upsampling::flood_depth_proc_with_edge()をupsampling::flood_depth_proc_with_edge_fixed()へ変更、API変更なし　
 
 ## 3. パッケージの構成
 リリース物の構成は以下となります。\
