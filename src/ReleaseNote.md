@@ -34,15 +34,25 @@
 * 使用方法
   * sample.cppをご参照ください。
 
-## Verion 1.1.1
+## Version 1.1.1
 * 日付 22/8/8
 * 変更点
   * DSViewerチームの指摘により、修正
     * Upsampling classのメンバー変数m_xxx_のフォーマットに修正
     * ヘッダファイルのget_default_upsampling_parametersとset_upsampling_parametersにコメントの追加
     * パラメータを構造体にまとめ、設定と取得の際に使用することに修正
- ## Verion 1.1.2
+    * cannyの閾値をthresh1とthresh2に統一
+  
+## Version 1.1.2
 * 日付 22/11/16
 * 変更点
   * upsampling::flood_depth_proc_with_edge()バグ修正
   * upsampling::flood_depth_proc_with_edge_fixed()へ変更、API変更なし
+
+## Version 1.2
+* 日付 22/12/15
+* 変更点
+  * 前処理に、Canny edge detectionの利用中止。代わりに、デプスエッジの利用。
+  * extract_depth_edge(), filter_parallax_devation_points(), filter_error_edge_points()の追加
+  * 前処理のパラメータの変更：Canny thresholdの削除、depth_diff_thresh, guide_diff_thresh, min_diff_countの追加
+  * m_use_preprocessingの追加。Falseになると、前処理（視差ずれ、デプスエッジ処理）なしで、なま入力floodでUpsampling.

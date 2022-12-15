@@ -17,10 +17,10 @@ typedef struct Upsampling_Params{
 typedef struct Preprocessing_Params{
 	float z_continuous_thresh; // (m) z threshold for continuous region 
 	float occlusion_thresh; // threshold for justification of occlusion
-	int guide_edge_dilate_size; // dilate size of guide image edge
-	int canny_thresh1; // canny threshold 1
-	int canny_thresh2; // canny threshold 2
 	int range_flood; // flood upsampling range 
+	float depth_diff_thresh; // threshold justify if depth different
+	float guide_diff_thresh; // threshold justify if guide different
+	int min_diff_count; // minimum count for diffence between depth and guide
 } Preprocessing_Params;
 
 typedef struct Camera_Params{
@@ -38,7 +38,7 @@ public:
 	upsampling();
 
 	~upsampling() {};
-	// set camera(RGB) parameters for xyz2depthmap
+	// set camera(RGB) parameters 
 	void set_cam_paramters(const Camera_Params& params);
 	// set upsampling processing paramters 
 	void set_upsampling_parameters(const Upsampling_Params& params); 
@@ -48,13 +48,20 @@ public:
 	void set_preprocessing_parameters(const Preprocessing_Params& params);
 	// get default preprocessing paramters
 	void get_default_preprocessing_parameters(Preprocessing_Params& params);	
+	// set preprocessing on/off
+	bool use_proprocessing(void){ return this->m_use_preprocessing;};
+	void use_proprocessing(bool use){this->m_use_preprocessing = use;};
 	// main processing interface
 	bool run(const cv::Mat& rgb, const cv::Mat& flood_pc, const cv::Mat& spot_pc, cv::Mat& dense, cv::Mat& conf);
+	// filtered by confidence
+	void filter_by_confidence(const cv::Mat& dense, const cv::Mat& conf, cv::Mat& filtered, float threshold);
 	// for show depthmap
 	cv::Mat get_flood_depthMap() {return this->m_flood_dmap_;};
+	/* cv::Mat get_flood_edge_depthMap() {return this->m_flood_edge_dmap_;}; */
 	cv::Mat get_spot_depthMap() {return this->m_spot_dmap_;};
 	// convert depth map to point cloud
 	void depth2pc(const cv::Mat& depth, cv::Mat& pc);
+	void pc2depthmap(const cv::Mat& pc, cv::Mat& depth);
 private:
 	void clear(); // clear temperary variables
 	void initialization(cv::Mat& dense, cv::Mat& conf); // initialization
@@ -62,16 +69,21 @@ private:
 	void run_spot(const cv::Mat& img_guide, const cv::Mat& pc_spot, cv::Mat& dense, cv::Mat& conf); // processing for spot
 	void fgs_f(const cv::Mat & sparse, const cv::Mat& mask, const cv::Rect& roi, const float& lambda, 
 					cv::Mat& dense, cv::Mat& conf);
-	void spot_guide_proc(const cv::Mat& guide); // guide image processing for spot
+	void spot_guide_proc(const cv::Mat& img_guide); // guide image processing for spot
 	void spot_depth_proc(const cv::Mat& pc_spot); // depth processing for flood
-	void spot_preprocessing(const cv::Mat& guide, const cv::Mat& pc_spot); // preprocessing for spot
-	void flood_guide_proc(const cv::Mat& guide); // guide image processing for flood
-	void flood_guide_proc2(const cv::Mat& guide); // guide image processing 2 for flood
-	void flood_depth_proc(const cv::Mat& pc_flood); // depth processing for flood
-	void flood_depth_proc_with_edge_fixed(const cv::Mat& pc_flood);
+	void spot_preprocessing(const cv::Mat& img_guide, const cv::Mat& pc_spot); // preprocessing for spot
+	void flood_guide_proc(const cv::Mat& img_guide); // guide image processing for flood
+	void flood_depth_proc(const cv::Mat& pc_flood, const cv::Mat& guide); // depth processing for flood
+	/* void flood_depth_proc_with_edge(const cv::Mat& pc_flood); // * release 1 with bugs */ 
+	void extract_depth_edge(const cv::Mat& z_map, cv::Mat& edge_mask);
+	void filter_parallax_devation_points(const cv::Mat& pc_in, cv::Mat& pc_out);
+	void filter_error_edge_points(const cv::Mat& img_guide, const cv::Mat& pc_in, cv::Mat& pc_out);
+	void pc2flood_dmap(const cv::Mat& pc); // * convert pointcloud to dmap for upsampling
+	void flood_depth_proc_with_edge(const cv::Mat& pc_flood, const cv::Mat& img_guide); // * release depth edge
 	void flood_depth_proc_without_edge(const cv::Mat& pc_flood);
-	void flood_preprocessing(const cv::Mat& guide, const cv::Mat& pc_flood); // preprocessing for flood
+	void flood_preprocessing(const cv::Mat& img_guide, const cv::Mat& pc_flood); // preprocessing for flood
 private:
+	bool m_use_preprocessing = true;
 	const int m_guide_width_ = 960; // guide image width 
 	const int m_guide_height_ = 540; // guide image height
 	const int m_grid_width_ = 80; // flood depth grid width
@@ -101,9 +113,10 @@ private:
 	int m_guide_edge_dilate_size_ = 4; // (1~10) dilate size of guide image edge
 	float m_z_continuous_thresh_ = 0.1f; // (0~1) z threshold for continuous region 
 	float m_occlusion_thresh_ = 10.5f; // (0~20.0)  threshold for justification of occlusion (max pixels between neigbors)
-	int m_canny_thresh1_ = 40; // 0~255
-	int m_canny_thresh2_ = 170; // 0~255
 	int m_range_flood_ = 20; // 2~40
+	float m_depth_diff_thresh_ = 0.1f; // meter
+	float m_guide_diff_thresh_ = 40.0f; // 0~ 255
+	int m_min_diff_count = 1; // 0~8
 	// camera paramters
 	float m_fx_ = 135.51f;
 	float m_fy_ = 135.51f;
@@ -111,7 +124,6 @@ private:
 	float m_cy_ = 120.41f;
 	// processing flag
 	bool m_depth_edge_proc_on_ = true;
-	bool m_guide_edge_proc_on_ = true;
+	/* bool m_guide_edge_proc_on_ = true; */
 	cv::Ptr<cv::ximgproc::FastGlobalSmootherFilter> m_fgs_filter_;
 };
-
