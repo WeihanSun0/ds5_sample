@@ -35,7 +35,8 @@ float g_min_value = 0.0;
 float g_max_value = 1.0; // 1 meter
 #endif
 
-const string strParam = rootPath + "dat/camParam/camera_calib/param_tl10.txt";
+/* const string strParam = rootPath + "dat/camParam/camera_calib/param_tl10.txt"; */
+const string strParam = rootPath + "dat/camParam/camera_calib/param_sun.txt";
 
 float g_FPS = 0.0;
 
@@ -218,6 +219,8 @@ int main(int argc, char* argv[])
     }
     float cx, cy, fx, fy;
     get_rgb_params(params, cx, cy, fx, fy);
+    
+    bool auto_save = false; // auto save then exit
 
     // frame shift for debug
     int frameShift = 0;
@@ -322,7 +325,14 @@ int main(int argc, char* argv[])
             imgShow = visualization(imgGuide, dmapFlood, dmapSpot, dmap_filtered, mode);
             cv::imshow(strWndName, imgShow);
         }
-
+        if (auto_save & res) {
+            sprintf_s(szFN, "%s/%08d_dense_dmap.tiff", strSavePath.c_str(), curr_frame_idx);
+            cv::imwrite(szFN, dense);
+            sprintf_s(szFN, "%s/%08d_conf.tiff", strSavePath.c_str(), curr_frame_idx);
+            cv::imwrite(szFN, conf);
+            sprintf_s(szFN, "%s/%08d_color.png", strSavePath.c_str(), curr_frame_idx);
+            cv::imwrite(szFN, imgShow);
+        }
         char c= cv::waitKey(30);
         switch (c)
         {
@@ -362,6 +372,10 @@ int main(int argc, char* argv[])
             cv::destroyWindow(strWndName);
             createWindow(strWndName, vecTrackbarLabels, vecTrackbarValues, vecTrackbarValueRanges);
             break;
+        case 'a': // auto save
+            auto_save = true;
+            curr_frame_idx = -1;
+            break;
         case 'p': // pause
             fixedFrame = 1 - fixedFrame;
             break;
@@ -385,11 +399,14 @@ int main(int argc, char* argv[])
             imgGuide.copyTo(last_guide);
             pcFlood.copyTo(last_depth);
         }
+        if (auto_save & (curr_frame_idx > end_frame_idx)) { // exit loop
+            break;
+        }
         if(curr_frame_idx > end_frame_idx) // repeat
             curr_frame_idx = start_frame_idx;
         if(curr_frame_idx < 0) // loop
             curr_frame_idx = end_frame_idx;
-        
+
         dmapFlood.release();
         imgGuide.release();
         dmapSpot.release();
